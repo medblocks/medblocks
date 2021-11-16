@@ -6,6 +6,20 @@ services:
       - "4222:4222"
 
 
+  db:
+    image: postgres:13.4
+    command: 
+      - -c
+      - max_replication_slots=10
+      - -c
+      - wal_level=logical
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+
   openehr:
     image: "ehrbase/ehrbase:${EHRBASE_TAG}"
     environment:
