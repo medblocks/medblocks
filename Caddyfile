@@ -1,0 +1,67 @@
+{
+    admin :2019
+}
+
+{$DOMAIN_NAME} {
+     @options {
+        method OPTIONS 
+        path /*
+    }
+    handle @options {
+        header {
+            ?Access-Control-Allow-Origin "*"
+            Access-Control-Allow-Methods "OPTIONS, GET, PUT, POST, DELETE"
+            Access-Control-Allow-Headers "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token, Cache-Control"
+            Access-Control-Expose-Headers Authorization
+        }
+        respond "OK" 200
+    }
+    handle /fhir* {
+        reverse_proxy fhir:8080
+    }
+    handle /ehrbase* {
+        reverse_proxy openehr:8080
+    }
+    handle_path /hydra/public* {
+        rewrite * {path}
+        reverse_proxy hydra:4444
+        header {
+            ?Access-Control-Allow-Origin "*"
+            Access-Control-Allow-Methods "OPTIONS, GET, PUT, POST, DELETE"
+            Access-Control-Allow-Headers "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token, Cache-Control"
+            Access-Control-Expose-Headers Authorization
+        }
+    }
+    handle_path /hydra/admin* {
+        rewrite * {path}
+        reverse_proxy hydra:4445
+    }
+    handle_path /kratos/public* {
+        rewrite * {path}
+        reverse_proxy kratos:4433
+    }
+    handle_path /kratos/admin* {
+        rewrite * {path}
+        reverse_proxy kratos:4434
+    }
+    handle_path /auth* {
+        rewrite * {path}
+        reverse_proxy auth:4455
+        header {
+            ?Access-Control-Allow-Origin "*"
+            Access-Control-Allow-Methods "OPTIONS, GET, PUT, POST, DELETE"
+            Access-Control-Allow-Headers "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token, Cache-Control"
+            Access-Control-Expose-Headers Authorization
+        }        
+    }
+    handle {
+        respond "Not Found" 404
+    }
+}
+
+
+
+registry.{$DOMAIN_NAME} {
+    reverse_proxy registry:8080
+    rewrite * {path}
+}
