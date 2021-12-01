@@ -3,7 +3,7 @@
 }
 
 {$DOMAIN_NAME} {
-     @options {
+    @options {
         method OPTIONS 
         path /*
     }
@@ -52,10 +52,14 @@
             Access-Control-Allow-Methods "OPTIONS, GET, PUT, POST, DELETE"
             Access-Control-Allow-Headers "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token, Cache-Control"
             Access-Control-Expose-Headers Authorization
-        }        
+        }
     }
     handle {
         respond "Not Found" 404
+    }
+
+    handle /registry* {
+        redir https://registry.{$DOMAIN_NAME}/
     }
 }
 
@@ -63,5 +67,10 @@
 
 registry.{$DOMAIN_NAME} {
     reverse_proxy registry:8080
+    rewrite * {path}
+}
+
+drx.{$DOMAIN_NAME} {
+    reverse_proxy drx:8080
     rewrite * {path}
 }
