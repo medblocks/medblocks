@@ -57,20 +57,4 @@
     handle {
         respond "Not Found" 404
     }
-
-    handle /registry* {
-        redir https://registry.{$DOMAIN_NAME}/
-    }
-}
-
-
-
-registry.{$DOMAIN_NAME} {
-    reverse_proxy registry:8080
-    rewrite * {path}
-}
-
-drx.{$DOMAIN_NAME} {
-    reverse_proxy drx:8080
-    rewrite * {path}
 }
