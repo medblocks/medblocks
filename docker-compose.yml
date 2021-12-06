@@ -64,7 +64,7 @@ services:
   kratos-migrate:
     image: oryd/kratos:${KRATOS_TAG}
     environment:
-      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?sslmode=require
+      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos
     volumes:
       - type: bind
         source: ./kratos
@@ -79,7 +79,7 @@ services:
     image: oryd/kratos:${KRATOS_TAG}
     restart: unless-stopped
     environment:
-      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?sslmode=require&max_conns=3&max_idle_conns=1
+      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?max_conns=3&max_idle_conns=1
       - LOG_LEVEL=trace
       - SERVE_PUBLIC_BASE_URL=${DOMAIN_NAME:-http://localhost}/kratos/public
       - SERVE_ADMIN_BASE_URL=http://kratos:4434/
@@ -110,7 +110,7 @@ services:
         source: ./hydra
         target: /etc/config/hydra
     environment:
-      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?sslmode=require&max_conns=3&max_idle_conns=1
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?max_conns=3&max_idle_conns=1
       - URLS_SELF_ISSUER=${DOMAIN_NAME:-http://localhost}/hydra/public
       - URLS_CONSENT=${DOMAIN_NAME:-http://localhost}/auth/hydraconsent
       - URLS_LOGIN=${DOMAIN_NAME:-http://localhost}/auth/hydralogin
@@ -128,7 +128,7 @@ services:
   hydra-migrate:
     image: oryd/hydra:${HYDRA_TAG}
     environment:
-      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?sslmode=require
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra
     command:
       migrate -c /etc/config/hydra/hydra.yml sql -e --yes
     volumes:
