@@ -110,13 +110,14 @@ services:
         source: ./hydra
         target: /etc/config/hydra
     environment:
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=patient_id,organization_id,scope,realm_access
+      - STRATEGIES_ACCESS_TOKEN=jwt
       - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?max_conns=3&max_idle_conns=1
-      - SERVE_COOKIES_SAME_SITE_LEGACY_WORKAROUND=true
       - URLS_SELF_ISSUER=${DOMAIN_NAME:-http://localhost}/hydra/public
       - URLS_CONSENT=${DOMAIN_NAME:-http://localhost}/auth/hydraconsent
       - URLS_LOGIN=${DOMAIN_NAME:-http://localhost}/auth/hydralogin
       - URLS_LOGOUT=${DOMAIN_NAME:-http://localhost}/auth/hydralogout
-      - URLS_POST_LOGOUT_REDIRECT=${DOMAIN_NAME:-http://localhost}/fhir/Patient
+      - URLS_POST_LOGOUT_REDIRECT=${DOMAIN_NAME:-http://localhost}/auth/postlogout
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_PUBLIC_CORS_ALLOWED_METHODS=POST,GET,PUT,DELETE,OPTIONS
       - SERVE_ADMIN_CORS_ENABLED=true
