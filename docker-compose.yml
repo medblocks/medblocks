@@ -1,9 +1,9 @@
 version: "3.8"
 services:
-  nats:
-    image: nats:${NATS_TAG}
-    ports:
-      - "4222:4222"
+  # nats:
+  #   image: nats:${NATS_TAG}
+  #   ports:
+  #     - "4222:4222"
 
 
   db:
@@ -14,37 +14,39 @@ services:
       - -c
       - wal_level=logical
     volumes:
-      - db-data:/var/lib/postgresql/data
+      # - db-data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
     environment:
       POSTGRES_PASSWORD: postgres
-
-
-  openehr:
-    image: "ehrbase/ehrbase:${EHRBASE_TAG}"
-    environment:
-      SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
-      SPRING_DATASOURCE_USERNAME: ehrbase
-      SPRING_DATASOURCE_PASSWORD: ehrbase
-      SPRING_DATASOURCE_MAX_ACTIVE: 8
-      SERVER_AQLCONFIG_USEJSQUERY: "false"
-      SERVER_NODENAME: "localhost"
     ports:
-      - "8080:8080"
+      - "5432:5432"
 
 
-  fhir:
-    image: "tornadoalert/fhir:${FHIR_TAG}"
-    environment:
-      spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
-      spring.datasource.username: hapi
-      spring.datasource.password: hapi
-      spring.datasource.maxActive: 8
-      spring.datasource.driverClassName: org.postgresql.Driver
-      hapi.fhir.subscription.resthook_enabled: "true"
-      hapi.fhir.subscription.websocket_enabled: "true"
-      hapi.fhir.client_id_strategy: ANY
-      hapi.fhir.nats: "nats://nats:4222"
+  # openehr:
+  #   image: "ehrbase:${EHRBASE_TAG}"
+  #   environment:
+  #     SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
+  #     SPRING_DATASOURCE_USERNAME: ehrbase
+  #     SPRING_DATASOURCE_PASSWORD: ehrbase
+  #     SPRING_DATASOURCE_MAX_ACTIVE: 8
+  #     SERVER_AQLCONFIG_USEJSQUERY: "false"
+  #     SERVER_NODENAME: "localhost"
+  #   ports:
+  #     - "8080:8080"
+
+
+  # fhir:
+  #   image: "tornadoalert/fhir:${FHIR_TAG}"
+  #   environment:
+  #     spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
+  #     spring.datasource.username: hapi
+  #     spring.datasource.password: hapi
+  #     spring.datasource.maxActive: 8
+  #     spring.datasource.driverClassName: org.postgresql.Driver
+  #     hapi.fhir.subscription.resthook_enabled: "true"
+  #     hapi.fhir.subscription.websocket_enabled: "true"
+  #     hapi.fhir.client_id_strategy: ANY
+  #     hapi.fhir.nats: "nats://nats:4222"
 
   
   caddy:
@@ -62,9 +64,9 @@ services:
 
 
   kratos-migrate:
-    image: oryd/kratos:${KRATOS_TAG}
+    image: kratos
     environment:
-      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?sslmode=require
+      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos
     volumes:
       - type: bind
         source: ./kratos
@@ -76,10 +78,10 @@ services:
   kratos:
     depends_on:
       - kratos-migrate
-    image: oryd/kratos:${KRATOS_TAG}
+    image: kratos
     restart: unless-stopped
     environment:
-      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?sslmode=require&max_conns=3&max_idle_conns=1
+      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?max_conns=3&max_idle_conns=1
       - LOG_LEVEL=trace
       - SERVE_PUBLIC_BASE_URL=${DOMAIN_NAME:-http://localhost}/kratos/public
       - SERVE_ADMIN_BASE_URL=http://kratos:4434/
@@ -101,7 +103,7 @@ services:
 
 
   hydra:
-    image: oryd/hydra:${HYDRA_TAG}
+    image: hydra
     command:
       serve -c /etc/config/hydra/hydra.yml all --dangerous-force-http
     volumes:
@@ -110,12 +112,14 @@ services:
         source: ./hydra
         target: /etc/config/hydra
     environment:
-      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?sslmode=require&max_conns=3&max_idle_conns=1
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=patient_id,organization_id,scope,realm_access
+      - STRATEGIES_ACCESS_TOKEN=jwt
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?max_conns=3&max_idle_conns=1
       - URLS_SELF_ISSUER=${DOMAIN_NAME:-http://localhost}/hydra/public
       - URLS_CONSENT=${DOMAIN_NAME:-http://localhost}/auth/hydraconsent
       - URLS_LOGIN=${DOMAIN_NAME:-http://localhost}/auth/hydralogin
       - URLS_LOGOUT=${DOMAIN_NAME:-http://localhost}/auth/hydralogout
-      - URLS_POST_LOGOUT_REDIRECT=${DOMAIN_NAME:-http://localhost}/fhir/Patient
+      - URLS_POST_LOGOUT_REDIRECT=${DOMAIN_NAME:-http://localhost}/auth/postlogout
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_PUBLIC_CORS_ALLOWED_METHODS=POST,GET,PUT,DELETE,OPTIONS
       - SERVE_ADMIN_CORS_ENABLED=true
@@ -126,9 +130,9 @@ services:
    
 
   hydra-migrate:
-    image: oryd/hydra:${HYDRA_TAG}
+    image: hydra
     environment:
-      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?sslmode=require
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra
     command:
       migrate -c /etc/config/hydra/hydra.yml sql -e --yes
     volumes:
@@ -140,7 +144,7 @@ services:
    
 
   auth:
-    image: medblocks/auth:${AUTH_TAG}
+    image: auth
     environment:
       - KRATOS_PUBLIC_URL=http://kratos:4433
       - KRATOS_ADMIN_URL=http://kratos:4434
@@ -150,10 +154,10 @@ services:
       - LOGO_URL=https://www.kadencewp.com/wp-content/uploads/2020/10/alogo-2.svg
       - PORT=4455
 
-  registry:
-    image: medblocks/admin:${REGISTRY_TAG}
-    environment:
-      HYDRA_URL: ${DOMAIN_NAME:-http://localhost}/hydra/admin
+  # registry:
+  #   image: medblocks/admin:${REGISTRY_TAG}
+  #   environment:
+  #     HYDRA_URL: ${DOMAIN_NAME:-http://localhost}/hydra/admin
 
     
 
