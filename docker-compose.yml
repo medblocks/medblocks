@@ -19,33 +19,35 @@ services:
     ports:
       - "5432:5432"
 
-  # openehr:
-  #   image: "ehrbase"
-  #   environment:
-  #     # SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
-  #     SPRING_DATASOURCE_USERNAME: ehrbase
-  #     SPRING_DATASOURCE_PASSWORD: ehrbase
-  #     SPRING_DATASOURCE_MAX_ACTIVE: 8
-  #     SERVER_AQLCONFIG_USEJSQUERY: "false"
-  #     SERVER_NODENAME: "localhost"
-  #   ports:
-  #     - "8080:8080"
-  #   volumes:
-  #     - ./application.yml:/application.yml
-  #   command: "java -Dspring.config.location=file:/application.yml -jar ehrbase.jar"
+  openehr:
+    image: "ehrbase"
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
+      SPRING_DATASOURCE_USERNAME: ehrbase
+      SPRING_DATASOURCE_PASSWORD: ehrbase
+      SPRING_DATASOURCE_MAX_ACTIVE: 8
+      SERVER_AQLCONFIG_USEJSQUERY: "false"
+      SERVER_NODENAME: "localhost"
+      SECURITY_AUTHTYPE: NONE
+      ABAC_ENABLED: false
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./application.yml:/application.yml
+    command: "java -Dspring.config.location=file:/application.yml -jar ehrbase.jar"
 
-  # fhir:
-  #   image: "tornadoalert/fhir:${FHIR_TAG}"
-  #   environment:
-  #     spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
-  #     spring.datasource.username: hapi
-  #     spring.datasource.password: hapi
-  #     spring.datasource.maxActive: 8
-  #     spring.datasource.driverClassName: org.postgresql.Driver
-  #     hapi.fhir.subscription.resthook_enabled: "true"
-  #     hapi.fhir.subscription.websocket_enabled: "true"
-  #     hapi.fhir.client_id_strategy: ANY
-  #     hapi.fhir.nats: "nats://nats:4222"
+  fhir:
+    image: "tornadoalert/fhir:${FHIR_TAG}"
+    environment:
+      spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
+      spring.datasource.username: hapi
+      spring.datasource.password: hapi
+      spring.datasource.maxActive: 8
+      spring.datasource.driverClassName: org.postgresql.Driver
+      hapi.fhir.subscription.resthook_enabled: "true"
+      hapi.fhir.subscription.websocket_enabled: "true"
+      hapi.fhir.client_id_strategy: ANY
+      hapi.fhir.nats: "nats://nats:4222"
 
   
   caddy:
@@ -111,6 +113,7 @@ services:
         source: ./hydra
         target: /etc/config/hydra
     environment:
+      - SERVE_TLS_ENABLED=${HTTPS:-false}
       - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=patient_id,organization_id,scope,realm_access
       - STRATEGIES_ACCESS_TOKEN=jwt
       - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?max_conns=3&max_idle_conns=1
