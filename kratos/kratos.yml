@@ -10,6 +10,10 @@ serve:
   admin:
     base_url: http://kratos:4434/
 
+session:
+  cookie:
+    same_site: Strict
+
 selfservice:
   default_browser_return_url: http://127.0.0.1:4455/
   whitelisted_return_urls:

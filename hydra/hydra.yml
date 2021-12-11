@@ -1,13 +1,16 @@
 serve:
   cookies:
-    same_site_mode: None 
-
+    same_site_mode: None
+  tls:
+    enabled: true
+    allow_termination_from:
+      - 172.31.0.0/16
 urls:
   self:
     issuer: http://127.0.0.1:4444
   consent: http://127.0.0.1:4455/hydraconsent
   login: http://127.0.0.1:4455/hydralogin
-  logout: http://127.0.0.1:4455/hydra/logout
+  logout: http://127.0.0.1:4455/hydralogout
 
 secrets:
   system:

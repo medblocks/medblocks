@@ -34,7 +34,7 @@
     }
     handle_path /hydra/admin* {
         rewrite * {path}
-        reverse_proxy hydra:4445
+        reverse_proxy hydraadmin:4445
     }
     handle_path /kratos/public* {
         rewrite * {path}
@@ -53,6 +53,9 @@
             Access-Control-Allow-Headers "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token, Cache-Control"
             Access-Control-Expose-Headers Authorization
         }
+    }
+    handle_path / {
+        reverse_proxy 
     }
     handle {
         respond "Not Found" 404
