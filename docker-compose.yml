@@ -1,9 +1,9 @@
 version: "3.3"
 services:
-  # nats:
-  #   image: nats:${NATS_TAG}
-  #   ports:
-  #     - "4222:4222"
+  nats:
+    image: nats:${NATS_TAG}
+    ports:
+      - "4222:4222"
   db:
     image: postgres:13.4
     command: 
