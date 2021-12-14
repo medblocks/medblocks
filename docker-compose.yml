@@ -106,7 +106,7 @@ services:
   hydra:
     image: oryd/hydra:${HYDRA_TAG}
     command:
-      serve -c /etc/config/hydra/hydra.yml public
+      serve -c /etc/config/hydra/hydra.yml public --dangerous-force-http
     volumes:
       -
         type: bind
@@ -172,7 +172,7 @@ services:
    
 
   auth:
-    image: auth
+    image: medblocks/auth:${AUTH_TAG}
     environment:
       - KRATOS_PUBLIC_URL=http://kratos:4433
       - KRATOS_ADMIN_URL=http://kratos:4434
