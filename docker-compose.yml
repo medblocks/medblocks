@@ -21,6 +21,7 @@ services:
 
   openehr:
     image: "ehrbase/ehrbase:${EHRBASE_TAG}"
+    restart: unless-stopped
     environment:
       SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
       SPRING_DATASOURCE_USERNAME: ehrbase
@@ -185,9 +186,6 @@ services:
     image: medblocks/admin:${REGISTRY_TAG}
     environment:
       HYDRA_URL: ${DOMAIN_NAME:-http://localhost}/hydra/admin
-
-  test:
-    image: ubuntu
 
 volumes: 
   db-data:
