@@ -32,9 +32,8 @@ services:
       ABAC_ENABLED: "false"
     ports:
       - "8080:8080"
-    volumes:
-      - ./application.yml:/application.yml
-    command: "java -Dspring.config.location=file:/application.yml -jar ehrbase.jar"
+    
+    
 
   fhir:
     image: "tornadoalert/fhir:${FHIR_TAG}"
