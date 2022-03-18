@@ -2,7 +2,7 @@
     admin :2019
 }
 
-{$DOMAIN_NAME} {
+:80 {
     @options {
         method OPTIONS 
         path /*

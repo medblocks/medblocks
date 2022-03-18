@@ -1,0 +1,193 @@
+version: "3.3"
+services:
+  nats:
+    image: nats:${NATS_TAG}
+    ports:
+      - "4222:4222"
+  db:
+    image: postgres:13.4
+    command: 
+      - -c
+      - max_replication_slots=10
+      - -c
+      - wal_level=logical
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+
+  openehr:
+    image: "ehrbase/ehrbase:${EHRBASE_TAG}"
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
+      SPRING_DATASOURCE_USERNAME: ehrbase
+      SPRING_DATASOURCE_PASSWORD: ehrbase
+      SPRING_DATASOURCE_MAX_ACTIVE: 8
+      SERVER_AQLCONFIG_USEJSQUERY: "false"
+      SERVER_NODENAME: "localhost"
+      SECURITY_AUTHTYPE: NONE
+      ABAC_ENABLED: "false"
+    ports:
+      - "8080:8080"
+    
+    
+
+  fhir:
+    image: "tornadoalert/fhir:${FHIR_TAG}"
+    environment:
+      spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
+      spring.datasource.username: hapi
+      spring.datasource.password: hapi
+      spring.datasource.maxActive: 8
+      spring.datasource.driverClassName: org.postgresql.Driver
+      hapi.fhir.subscription.resthook_enabled: "true"
+      hapi.fhir.subscription.websocket_enabled: "true"
+      hapi.fhir.client_id_strategy: ANY
+      hapi.fhir.nats: "nats://nats:4222"
+
+  
+  caddy:
+    image: caddy:${CADDY_TAG}
+    ports:
+      - "2019:2019"
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN_NAME=${DOMAIN_NAME:-:80}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+
+
+  kratos-migrate:
+    image: oryd/kratos:${KRATOS_TAG}
+    environment:
+      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos
+    volumes:
+      - type: bind
+        source: ./kratos
+        target: /etc/config/kratos
+    command: -c /etc/config/kratos/kratos.yml migrate sql -e --yes
+    restart: on-failure
+ 
+
+  kratos:
+    depends_on:
+      - kratos-migrate
+    image: oryd/kratos:${KRATOS_TAG}
+    restart: unless-stopped
+    environment:
+      - DSN=postgres://kratos:kratos@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/kratos?max_conns=3&max_idle_conns=1
+      - LOG_LEVEL=trace
+      - SERVE_PUBLIC_BASE_URL=${DOMAIN_NAME:-http://localhost}/kratos/public
+      - SERVE_ADMIN_BASE_URL=http://kratos:4434/
+      - SELFSERVICE_DEFAULT_BROWSER_RETURN_URL=${DOMAIN_NAME:-http://localhost}/auth/
+      - SELFSERVICE_WHITELISTED_RETURN_URLS=${DOMAIN_NAME:-http://localhost}/auth/,https://google.com
+      - SELFSERVICE_FLOWS_ERROR_UI_URL=${DOMAIN_NAME:-http://localhost}/auth/error
+      - SELFSERVICE_FLOWS_SETTINGS_UI_URL=${DOMAIN_NAME:-http://localhost}/auth/settings
+      - SELFSERVICE_FLOWS_RECOVERY_UI_URL=${DOMAIN_NAME:-http://localhost}/auth/recovery
+      - SELFSERVICE_FLOWS_VERIFICATION_UI_URL=${DOMAIN_NAME:-http://localhost}/auth/verify
+      - SELFSERVICE_FLOWS_VERIFICATION_AFTER_DEFAULT_BROWSER_RETURN_URL=${DOMAIN_NAME:-http://localhost}/auth/
+      - SELFSERVICE_FLOWS_LOGOUT_AFTER_DEFAULT_BROWSER_RETURN_URL=${DOMAIN_NAME:-http://localhost}/auth/login
+      - SELFSERVICE_FLOWS_LOGIN_UI_URL=${DOMAIN_NAME:-http://localhost}/auth/login
+      - SELFSERVICE_FLOWS_REGISTRATION_UI_URL=${DOMAIN_NAME:-http://localhost}/auth/registration
+    command: serve -c /etc/config/kratos/kratos.yml --dev --watch-courier
+    volumes:
+      - type: bind
+        source: ./kratos
+        target: /etc/config/kratos
+
+
+  hydra:
+    image: oryd/hydra:${HYDRA_TAG}
+    command:
+      serve -c /etc/config/hydra/hydra.yml public --dangerous-force-http
+    volumes:
+      -
+        type: bind
+        source: ./hydra
+        target: /etc/config/hydra
+    environment:
+      - SERVE_TLS_ENABLED=${HTTPS:-false}
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=patient_id,organization_id,scope,realm_access
+      - STRATEGIES_ACCESS_TOKEN=jwt
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?max_conns=3&max_idle_conns=1
+      - URLS_SELF_ISSUER=${DOMAIN_NAME:-http://localhost}/hydra/public
+      - URLS_CONSENT=${DOMAIN_NAME:-http://localhost}/auth/hydraconsent
+      - URLS_LOGIN=${DOMAIN_NAME:-http://localhost}/auth/hydralogin
+      - URLS_LOGOUT=${DOMAIN_NAME:-http://localhost}/auth/hydralogout
+      - URLS_POST_LOGOUT_REDIRECT=${DOMAIN_NAME:-http://localhost}/auth/postlogout
+      - SERVE_PUBLIC_CORS_ENABLED=true
+      - SERVE_PUBLIC_CORS_ALLOWED_METHODS=POST,GET,PUT,DELETE,OPTIONS
+      - SERVE_ADMIN_CORS_ENABLED=true
+      - SERVE_ADMIN_CORS_ALLOWED_METHODS=POST,GET,PUT,DELETE,OPTIONS
+    restart: unless-stopped
+    depends_on:
+      - hydra-migrate
+  
+  hydraadmin:
+    image: oryd/hydra:${HYDRA_TAG}
+    command:
+      serve -c /etc/config/hydra/hydra.yml admin --dangerous-force-http
+    volumes:
+      -
+        type: bind
+        source: ./hydra
+        target: /etc/config/hydra
+    environment:
+      - SERVE_TLS_ENABLED=false
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=patient_id,organization_id,scope,realm_access
+      - STRATEGIES_ACCESS_TOKEN=jwt
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra?max_conns=3&max_idle_conns=1
+      - URLS_SELF_ISSUER=${DOMAIN_NAME:-http://localhost}/hydra/public
+      - URLS_CONSENT=${DOMAIN_NAME:-http://localhost}/auth/hydraconsent
+      - URLS_LOGIN=${DOMAIN_NAME:-http://localhost}/auth/hydralogin
+      - URLS_LOGOUT=${DOMAIN_NAME:-http://localhost}/auth/hydralogout
+      - URLS_POST_LOGOUT_REDIRECT=${DOMAIN_NAME:-http://localhost}/auth/postlogout
+      - SERVE_PUBLIC_CORS_ENABLED=true
+      - SERVE_PUBLIC_CORS_ALLOWED_METHODS=POST,GET,PUT,DELETE,OPTIONS
+      - SERVE_ADMIN_CORS_ENABLED=true
+      - SERVE_ADMIN_CORS_ALLOWED_METHODS=POST,GET,PUT,DELETE,OPTIONS
+    restart: unless-stopped
+    depends_on:
+      - hydra-migrate
+
+  hydra-migrate:
+    image: oryd/hydra:${HYDRA_TAG}
+    environment:
+      - DSN=postgres://hydra:hydra@${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hydra
+    command:
+      migrate -c /etc/config/hydra/hydra.yml sql -e --yes
+    volumes:
+      -
+        type: bind
+        source: ./hydra
+        target: /etc/config/hydra
+    restart: on-failure
+   
+
+  auth:
+    image: medblocks/auth:${AUTH_TAG}
+    environment:
+      - KRATOS_PUBLIC_URL=http://kratos:4433
+      - KRATOS_ADMIN_URL=http://kratos:4434
+      - KRATOS_BROWSER_URL=${DOMAIN_NAME:-http://localhost}/kratos/admin
+      - BASE_URL=${DOMAIN_NAME:-http://localhost}/auth
+      - HYDRA_ADMIN_URL=http://hydraadmin:4445
+      - LOGO_URL=https://www.kadencewp.com/wp-content/uploads/2020/10/alogo-2.svg
+      - PORT=4455
+
+  registry:
+    image: medblocks/admin:${REGISTRY_TAG}
+    environment:
+      HYDRA_URL: ${DOMAIN_NAME:-http://localhost}/hydra/admin
+
+volumes: 
+  db-data:
+  caddy_data:
+  caddy_config:
