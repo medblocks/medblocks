@@ -36,21 +36,21 @@ services:
       - ./application.yml:/application.yml
     command: "java -Dspring.config.location=file:/application.yml -jar ehrbase.jar"
 
-  fhir:
-    image: "hapiproject/hapi:v5.7.0"
-    depends_on:
-      - db
-      - caddy
-    environment:
-      spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
-      spring.datasource.username: hapi
-      spring.datasource.password: hapi
-      spring.datasource.maxActive: 8
-      spring.datasource.driverClassName: org.postgresql.Driver
-      hapi.fhir.subscription.resthook_enabled: "true"
-      hapi.fhir.subscription.websocket_enabled: "true"
-      hapi.fhir.client_id_strategy: ANY
-      hapi.fhir.nats: "nats://nats:4222"
+  # fhir:
+  #   image: "hapiproject/hapi:v5.7.0"
+  #   depends_on:
+  #     - db
+  #     - caddy
+  #   environment:
+  #     spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
+  #     spring.datasource.username: hapi
+  #     spring.datasource.password: hapi
+  #     spring.datasource.maxActive: 8
+  #     spring.datasource.driverClassName: org.postgresql.Driver
+  #     hapi.fhir.subscription.resthook_enabled: "true"
+  #     hapi.fhir.subscription.websocket_enabled: "true"
+  #     hapi.fhir.client_id_strategy: ANY
+  #     hapi.fhir.nats: "nats://nats:4222"
 
   caddy:
     image: caddy:${CADDY_TAG}
