@@ -38,11 +38,11 @@ spring:
     jcache:
       config: classpath:ehcache.xml
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: https://deploy1.voiceintern.com/hydra/public/  # Example issuer URI - or set via env var
+  # security:
+  #   oauth2:
+  #     resourceserver:
+  #       jwt:
+  #         issuer-uri: https://deploy1.voiceintern.com/hydra/public/  # Example issuer URI - or set via env var
   profiles:
     active: local
   datasource:
@@ -62,7 +62,7 @@ security:
 
 # Attribute Based Access Control
 abac:
-  enabled: true
+  enabled: false
   # Server URL incl. trailing "/"!
   server: https://enobmsg2dodawu2.m.pipedream.net/
   # Definition of the JWT claim which contains the organization ID.

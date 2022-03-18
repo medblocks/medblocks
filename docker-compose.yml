@@ -2,7 +2,7 @@ version: "3.3"
 services:
   db:
     image: postgres:13.4
-    command: 
+    command:
       - -c
       - max_replication_slots=10
       - -c
@@ -16,7 +16,11 @@ services:
       - "5432:5432"
 
   openehr:
-    image: "ehrbase/ehrbase:${EHRBASE_TAG}"
+    image: "ehrbase/ehrbase:next"
+    restart: unless-stopped
+    depends_on:
+      - db
+      - caddy
     environment:
       SPRING_DATASOURCE_URL: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/ehrbase"
       SPRING_DATASOURCE_USERNAME: ehrbase
@@ -34,6 +38,9 @@ services:
 
   fhir:
     image: "hapiproject/hapi:v5.7.0"
+    depends_on:
+      - db
+      - caddy
     environment:
       spring.datasource.url: "jdbc:postgresql://${POSTGRES_PRIVATE_HOST}:${POSTGRES_PORT}/hapi"
       spring.datasource.username: hapi
@@ -44,7 +51,7 @@ services:
       hapi.fhir.subscription.websocket_enabled: "true"
       hapi.fhir.client_id_strategy: ANY
       hapi.fhir.nats: "nats://nats:4222"
-  
+
   caddy:
     image: caddy:${CADDY_TAG}
     ports:
@@ -58,8 +65,7 @@ services:
       - caddy_data:/data
       - caddy_config:/config
 
-
-volumes: 
+volumes:
   db-data:
   caddy_data:
   caddy_config:
